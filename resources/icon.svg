@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F3F0FF"/>
+    </linearGradient>
+    <linearGradient id="panel-purple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#818CF8"/>
+    </linearGradient>
+    <linearGradient id="panel-blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#60A5FA"/>
+      <stop offset="100%" stop-color="#38BDF8"/>
+    </linearGradient>
+    <linearGradient id="panel-white" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#FAFAFE"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="16" flood-color="#6366F120"/>
+    </filter>
+    <filter id="panel-shadow" x="-15%" y="-10%" width="140%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#6366F130"/>
+    </filter>
+    <filter id="front-shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="14" flood-color="#00000020"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded square (larger padding reduced) -->
+  <rect x="32" y="32" width="960" height="960" rx="215" ry="215"
+        fill="url(#bg)" filter="url(#shadow)"
+        stroke="#E8E0F0" stroke-width="2"/>
+
+  <!-- Card 3 (backmost) - purple - tilted most -->
+  <g transform="rotate(-14, 380, 500)" filter="url(#panel-shadow)">
+    <rect x="240" y="250" width="400" height="520" rx="28" ry="28"
+          fill="url(#panel-purple)" opacity="0.9"/>
+    <circle cx="290" cy="308" r="11" fill="#FFFFFF" opacity="0.7"/>
+    <circle cx="322" cy="308" r="11" fill="#FFFFFF" opacity="0.7"/>
+    <circle cx="354" cy="308" r="11" fill="#FFFFFF" opacity="0.7"/>
+  </g>
+
+  <!-- Card 2 (middle) - blue - tilted less -->
+  <g transform="rotate(-8, 460, 500)" filter="url(#panel-shadow)">
+    <rect x="290" y="240" width="420" height="530" rx="28" ry="28"
+          fill="url(#panel-blue)" opacity="0.9"/>
+    <circle cx="342" cy="300" r="11" fill="#FFFFFF" opacity="0.7"/>
+    <circle cx="374" cy="300" r="11" fill="#FFFFFF" opacity="0.7"/>
+    <circle cx="406" cy="300" r="11" fill="#FFFFFF" opacity="0.7"/>
+  </g>
+
+  <!-- Card 1 (front) - white - centered -->
+  <rect x="340" y="230" width="440" height="550" rx="30" ry="30"
+        fill="url(#panel-white)"
+        stroke="#E5E7EB" stroke-width="1.5"
+        filter="url(#front-shadow)"/>
+  <!-- Dots on white card -->
+  <circle cx="398" cy="292" r="12" fill="#A78BFA" opacity="0.9"/>
+  <circle cx="432" cy="292" r="12" fill="#818CF8" opacity="0.9"/>
+  <circle cx="466" cy="292" r="12" fill="#60A5FA" opacity="0.9"/>
+
+  <!-- Content lines on white card -->
+  <rect x="398" y="340" width="320" height="10" rx="5" fill="#E0DEFF"/>
+  <rect x="398" y="370" width="240" height="10" rx="5" fill="#EEF0FB"/>
+  <rect x="398" y="420" width="320" height="10" rx="5" fill="#DDE8FD"/>
+  <rect x="398" y="450" width="260" height="10" rx="5" fill="#EEF0FB"/>
+  <rect x="398" y="500" width="320" height="10" rx="5" fill="#E0DEFF"/>
+  <rect x="398" y="530" width="200" height="10" rx="5" fill="#EEF0FB"/>
+</svg>

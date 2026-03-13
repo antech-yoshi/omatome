@@ -1,0 +1,57 @@
+{
+  "name": "omatome",
+  "version": "1.0.0",
+  "description": "omatome: Multi-service workspace manager with isolated sessions",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "dev:clean": "rm -rf ~/Library/Application\\ Support/omatome && electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "package:mac": "npm run build && electron-builder --mac",
+    "package:win": "npm run build && electron-builder --win",
+    "package": "npm run build && electron-builder --mac --win"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^5.1.4",
+    "autoprefixer": "^10.4.27",
+    "electron": "^41.0.0",
+    "electron-builder": "^26.8.1",
+    "electron-vite": "^5.0.0",
+    "eslint": "^9.39.4",
+    "postcss": "^8.5.8",
+    "prettier": "^3.8.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3",
+    "uuid": "^13.0.0"
+  },
+  "build": {
+    "appId": "com.omatome.app",
+    "productName": "omatome",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*"
+    ],
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity",
+      "icon": "resources/icon.icns"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icon.png"
+    }
+  }
+}
