@@ -7,8 +7,6 @@ interface WebViewContainerProps {
   ephemeralTabs: EphemeralTab[];
   activeAccountId: string | null;
   activeEphemeralTabId: string | null;
-  lastUrls: Record<string, string>;
-  onUrlChange: (accountId: string, url: string) => void;
 }
 
 export default function WebViewContainer({
@@ -16,15 +14,20 @@ export default function WebViewContainer({
   ephemeralTabs,
   activeAccountId,
   activeEphemeralTabId,
-  lastUrls,
-  onUrlChange,
 }: WebViewContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const webviewRefs = useRef<Map<string, Electron.WebviewTag>>(new Map());
 
+  // Known service URLs for accounts whose service may have been removed from presets
+  const LEGACY_SERVICE_URLS: Record<string, string> = {
+    gmail: 'https://mail.google.com/',
+  };
+
   const getServiceUrl = (account: Account): string => {
     if (account.customUrl) return account.customUrl;
-    return PRESET_SERVICES.find((s) => s.id === account.serviceId)?.url ?? `https://${account.serviceId}`;
+    return PRESET_SERVICES.find((s) => s.id === account.serviceId)?.url
+      ?? LEGACY_SERVICE_URLS[account.serviceId]
+      ?? `https://${account.serviceId}.com/`;
   };
 
   // Manage account webviews
@@ -35,9 +38,7 @@ export default function WebViewContainer({
     for (const account of accounts) {
       if (!webviewRefs.current.has(account.id)) {
         const webview = document.createElement('webview') as Electron.WebviewTag;
-        // Restore last visited URL or use service default
-        const savedUrl = lastUrls[account.id];
-        webview.src = savedUrl || getServiceUrl(account);
+        webview.src = getServiceUrl(account);
         webview.partition = `persist:${account.partitionKey}`;
         webview.setAttribute('allowpopups', '');
         webview.style.width = '100%';
@@ -45,19 +46,6 @@ export default function WebViewContainer({
         webview.style.position = 'absolute';
         webview.style.inset = '0';
         webview.style.display = 'none';
-
-        // Track URL changes to persist last visited page
-        const accountId = account.id;
-        webview.addEventListener('did-navigate', (e: any) => {
-          if (e.url && e.url.startsWith('http')) {
-            onUrlChange(accountId, e.url);
-          }
-        });
-        webview.addEventListener('did-navigate-in-page', (e: any) => {
-          if (e.url && e.url.startsWith('http')) {
-            onUrlChange(accountId, e.url);
-          }
-        });
 
         container.appendChild(webview);
         webviewRefs.current.set(account.id, webview);
@@ -121,6 +109,11 @@ export default function WebViewContainer({
       return activeId ? webviewRefs.current.get(activeId) : undefined;
     };
     const handleReload = () => getActiveWebview()?.reload();
+    const handleReloadAll = () => {
+      for (const webview of webviewRefs.current.values()) {
+        webview.reload();
+      }
+    };
     const handleBack = () => {
       const wv = getActiveWebview();
       if (wv?.canGoBack()) wv.goBack();
@@ -131,11 +124,13 @@ export default function WebViewContainer({
     };
 
     window.electronAPI.onShortcut('shortcut:reload', handleReload);
+    window.electronAPI.onShortcut('shortcut:reload-all', handleReloadAll);
     window.electronAPI.onShortcut('shortcut:back', handleBack);
     window.electronAPI.onShortcut('shortcut:forward', handleForward);
 
     return () => {
       window.electronAPI.removeShortcutListener('shortcut:reload');
+      window.electronAPI.removeShortcutListener('shortcut:reload-all');
       window.electronAPI.removeShortcutListener('shortcut:back');
       window.electronAPI.removeShortcutListener('shortcut:forward');
     };

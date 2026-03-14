@@ -129,6 +129,43 @@ export default function Settings({
             </div>
           </div>
 
+          {/* Download folder */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+              Downloads
+            </h3>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+              Choose where files are saved when downloading from services.
+            </p>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 truncate">
+                {settings.downloadPath || 'System default (asks each time)'}
+              </div>
+              <button
+                onClick={async () => {
+                  const folder = await window.electronAPI.selectFolder();
+                  if (folder) {
+                    onUpdateSettings({ downloadPath: folder });
+                  }
+                }}
+                className="px-3 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors shrink-0"
+              >
+                Choose
+              </button>
+              {settings.downloadPath && (
+                <button
+                  onClick={() => onUpdateSettings({ downloadPath: undefined })}
+                  className="px-2 py-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shrink-0"
+                  title="Reset to default"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Keyboard shortcuts reference */}
           <div>
             <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
@@ -141,6 +178,7 @@ export default function Settings({
                 ['Previous account', '⌘ ['],
                 ['Toggle sidebar', '⌘ ⇧ S'],
                 ['Reload page', '⌘ R'],
+                ['Reload all services', '⌘ ⇧ R'],
                 ['Back', '⌘ ←'],
                 ['Forward', '⌘ →'],
                 ['Settings', '⌘ ,'],

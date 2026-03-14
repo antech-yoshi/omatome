@@ -19,12 +19,20 @@ export default function AccountEditModal({
   onClearSession,
 }: AccountEditModalProps) {
   const [label, setLabel] = useState('');
+  const [workspaceUrl, setWorkspaceUrl] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (account) {
       setLabel(account.label);
       setConfirmDelete(false);
+      // Extract workspace name from customUrl for Slack
+      if (account.serviceId === 'slack' && account.customUrl) {
+        const match = account.customUrl.match(/https?:\/\/([^.]+)\.slack\.com/);
+        setWorkspaceUrl(match ? match[1] : '');
+      } else {
+        setWorkspaceUrl('');
+      }
     }
   }, [account]);
 
@@ -35,7 +43,15 @@ export default function AccountEditModal({
 
   const handleSave = () => {
     if (label.trim()) {
-      onUpdate({ ...account, label: label.trim() });
+      const updated = { ...account, label: label.trim() };
+      if (account.serviceId === 'slack') {
+        if (workspaceUrl.trim()) {
+          updated.customUrl = `https://${workspaceUrl.trim()}.slack.com/`;
+        } else {
+          updated.customUrl = undefined;
+        }
+      }
+      onUpdate(updated);
       onClose();
     }
   };
@@ -97,6 +113,32 @@ export default function AccountEditModal({
               }}
             />
           </div>
+
+          {/* Slack workspace URL */}
+          {account.serviceId === 'slack' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                Workspace URL
+              </label>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-gray-400 dark:text-gray-500 shrink-0">https://</span>
+                <input
+                  type="text"
+                  value={workspaceUrl}
+                  onChange={(e) => setWorkspaceUrl(e.target.value)}
+                  placeholder="your-workspace"
+                  className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSave();
+                  }}
+                />
+                <span className="text-sm text-gray-400 dark:text-gray-500 shrink-0">.slack.com</span>
+              </div>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
+                Leave empty to open Slack's default page
+              </p>
+            </div>
+          )}
 
           {/* Danger zone */}
           <div className="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-2">

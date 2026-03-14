@@ -39,6 +39,7 @@ export type Appearance = 'light' | 'dark' | 'system';
 export interface AppSettings {
   linkOpenBehavior: LinkOpenBehavior;
   appearance: Appearance;
+  downloadPath?: string;
 }
 
 export interface AppState {
@@ -46,7 +47,6 @@ export interface AppState {
   groups: Group[];
   activeAccountId: string | null;
   sidebarCollapsed: boolean;
-  lastUrls?: Record<string, string>; // accountId -> last visited URL
 }
 
 export interface IpcChannels {

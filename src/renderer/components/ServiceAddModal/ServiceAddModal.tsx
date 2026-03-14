@@ -14,6 +14,7 @@ export default function ServiceAddModal({ isOpen, onClose, onAdd }: ServiceAddMo
   const [label, setLabel] = useState('');
   const [customUrl, setCustomUrl] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [workspaceUrl, setWorkspaceUrl] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -49,6 +50,7 @@ export default function ServiceAddModal({ isOpen, onClose, onAdd }: ServiceAddMo
     setSelectedServiceId(serviceId);
     const service = PRESET_SERVICES.find((s) => s.id === serviceId);
     setLabel(service?.name ?? '');
+    setWorkspaceUrl('');
     setStep('configure');
   };
 
@@ -71,7 +73,20 @@ export default function ServiceAddModal({ isOpen, onClose, onAdd }: ServiceAddMo
       }
     } else {
       if (selectedServiceId && label.trim()) {
-        onAdd(selectedServiceId, label.trim());
+        // For Slack, use the workspace URL if provided
+        if (selectedServiceId === 'slack' && workspaceUrl.trim()) {
+          let url = workspaceUrl.trim();
+          if (!/^https?:\/\//i.test(url)) {
+            url = `https://${url}`;
+          }
+          // Ensure it ends with slack.com pattern
+          if (!url.includes('.slack.com')) {
+            url = `https://${url.replace(/^https?:\/\//, '')}.slack.com/`;
+          }
+          onAdd(selectedServiceId, label.trim(), url);
+        } else {
+          onAdd(selectedServiceId, label.trim());
+        }
         handleClose();
       }
     }
@@ -82,6 +97,7 @@ export default function ServiceAddModal({ isOpen, onClose, onAdd }: ServiceAddMo
     setSelectedServiceId('');
     setLabel('');
     setCustomUrl('');
+    setWorkspaceUrl('');
     setSearchQuery('');
     onClose();
   };
@@ -287,6 +303,32 @@ export default function ServiceAddModal({ isOpen, onClose, onAdd }: ServiceAddMo
                   }}
                 />
               </div>
+
+              {/* Slack workspace URL */}
+              {selectedServiceId === 'slack' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                    Workspace URL
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm text-gray-400 dark:text-gray-500 shrink-0">https://</span>
+                    <input
+                      type="text"
+                      value={workspaceUrl}
+                      onChange={(e) => setWorkspaceUrl(e.target.value)}
+                      placeholder="your-workspace"
+                      className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleAdd();
+                      }}
+                    />
+                    <span className="text-sm text-gray-400 dark:text-gray-500 shrink-0">.slack.com</span>
+                  </div>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
+                    Leave empty to open Slack's default page
+                  </p>
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex justify-end gap-2 pt-2">

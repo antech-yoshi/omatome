@@ -15,6 +15,7 @@ declare global {
       removeGroup: (groupId: string) => Promise<{ groups: Group[]; accounts: Account[] }>;
       reorderGroups: (orderedIds: string[]) => Promise<Group[]>;
       openExternal: (url: string) => Promise<void>;
+      selectFolder: () => Promise<string | null>;
       getSettings: () => Promise<AppSettings>;
       updateSettings: (settings: Partial<AppSettings>) => Promise<AppSettings>;
       getAppState: () => Promise<AppState>;

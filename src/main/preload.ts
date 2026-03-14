@@ -20,6 +20,9 @@ const api = {
   // Shell
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
 
+  // Dialog
+  selectFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:select-folder'),
+
   // Settings
   getSettings: (): Promise<AppSettings> => ipcRenderer.invoke('settings:get'),
   updateSettings: (settings: Partial<AppSettings>): Promise<AppSettings> => ipcRenderer.invoke('settings:update', settings),
@@ -33,6 +36,7 @@ const api = {
     const validChannels = [
       'shortcut:settings',
       'shortcut:reload',
+      'shortcut:reload-all',
       'shortcut:toggle-sidebar',
       'shortcut:find',
       'shortcut:back',

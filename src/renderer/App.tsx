@@ -43,7 +43,6 @@ export default function App() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState<AppSettings>({ linkOpenBehavior: 'external-browser', appearance: 'system' });
-  const [lastUrls, setLastUrls] = useState<Record<string, string>>({});
 
   // Edit modals
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
@@ -56,7 +55,6 @@ export default function App() {
   useEffect(() => {
     window.electronAPI.getAppState().then((state) => {
       setSidebarCollapsed(state.sidebarCollapsed ?? false);
-      setLastUrls(state.lastUrls ?? {});
     });
     window.electronAPI.getSettings().then(setSettings);
 
@@ -89,37 +87,6 @@ export default function App() {
 
     return () => {
       window.electronAPI.removeShortcutListener('open-in-app-tab');
-    };
-  }, []);
-
-  // Track URL changes and persist with debounce
-  const lastUrlsRef = useRef(lastUrls);
-  lastUrlsRef.current = lastUrls;
-  const saveUrlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleUrlChange = useCallback((accountId: string, url: string) => {
-    setLastUrls((prev) => {
-      const updated = { ...prev, [accountId]: url };
-      lastUrlsRef.current = updated;
-
-      // Debounce saving to avoid excessive writes
-      if (saveUrlsTimerRef.current) clearTimeout(saveUrlsTimerRef.current);
-      saveUrlsTimerRef.current = setTimeout(() => {
-        window.electronAPI.saveAppState({ lastUrls: lastUrlsRef.current });
-      }, 2000);
-
-      return updated;
-    });
-  }, []);
-
-  // Save lastUrls on app close
-  useEffect(() => {
-    const handleBeforeClose = () => {
-      window.electronAPI.saveAppState({ lastUrls: lastUrlsRef.current });
-    };
-    window.electronAPI.onShortcut('app:before-close', handleBeforeClose);
-    return () => {
-      window.electronAPI.removeShortcutListener('app:before-close');
     };
   }, []);
 
@@ -230,8 +197,6 @@ export default function App() {
         ephemeralTabs={ephemeralTabs}
         activeAccountId={activeAccountId}
         activeEphemeralTabId={activeEphemeralTabId}
-        lastUrls={lastUrls}
-        onUrlChange={handleUrlChange}
       />
 
       <ServiceAddModal

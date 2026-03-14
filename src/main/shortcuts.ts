@@ -57,6 +57,11 @@ export function registerShortcuts(_window: BrowserWindow): void {
           accelerator: 'CmdOrCtrl+R',
           click: () => sendToWindow('shortcut:reload'),
         },
+        {
+          label: 'Reload All Services',
+          accelerator: 'CmdOrCtrl+Shift+R',
+          click: () => sendToWindow('shortcut:reload-all'),
+        },
         { type: 'separator' },
         {
           label: 'Toggle Sidebar',

@@ -1,4 +1,4 @@
-import { ipcMain, nativeTheme, session, shell } from 'electron';
+import { ipcMain, nativeTheme, session, shell, dialog } from 'electron';
 import type { AppStore } from './store';
 import type { Account, Group, AppState, AppSettings } from '@shared/types';
 
@@ -127,6 +127,15 @@ export function registerIpcHandlers(store: AppStore): void {
       nativeTheme.themeSource = settings.appearance;
     }
     return updated;
+  });
+
+  // Dialog
+  ipcMain.handle('dialog:select-folder', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
   });
 
   // App state

@@ -124,15 +124,6 @@ export const PRESET_SERVICES: ServiceDefinition[] = [
 
   // Productivity
   {
-    id: 'gmail',
-    name: 'Gmail',
-    url: 'https://mail.google.com/',
-    icon: 'gmail',
-    isPreset: true,
-    category: 'productivity',
-    relatedDomains: ['google.com', 'googleapis.com', 'gstatic.com'],
-  },
-  {
     id: 'google-drive',
     name: 'Google Drive',
     url: 'https://drive.google.com/',

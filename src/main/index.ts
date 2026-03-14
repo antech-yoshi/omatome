@@ -137,6 +137,15 @@ function createWindow(): void {
       }
     });
 
+    // Handle downloads: apply configured download path
+    webviewWebContents.session.on('will-download', (_event, item) => {
+      const downloadPath = store.get('settings').downloadPath;
+      if (downloadPath) {
+        const filePath = path.join(downloadPath, item.getFilename());
+        item.setSavePath(filePath);
+      }
+    });
+
     // Set Chrome-compatible User-Agent to bypass service browser checks (Slack, etc.)
     webviewWebContents.setUserAgent(CHROME_USER_AGENT);
 
