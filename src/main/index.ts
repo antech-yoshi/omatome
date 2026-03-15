@@ -60,6 +60,50 @@ function isExternalUrl(url: string, serviceHost: string, relatedDomains: string[
   }
 }
 
+// Find the service host and related domains for a webview based on its current URL
+function findServiceContext(currentUrl: string): { serviceHost: string; relatedDomains: string[] } {
+  let serviceHost = '';
+  let relatedDomains: string[] = [];
+
+  try {
+    serviceHost = new URL(currentUrl).hostname;
+  } catch { /* ignore */ }
+
+  const accounts = store.get('accounts', []);
+  const currentHost = serviceHost;
+
+  for (const account of accounts) {
+    // Check preset service
+    const service = PRESET_SERVICES.find((s) => s.id === account.serviceId);
+    if (service) {
+      try {
+        const sHost = new URL(service.url).hostname;
+        if (getBaseDomain(currentHost) === getBaseDomain(sHost) ||
+            (service.relatedDomains ?? []).some(d => getBaseDomain(currentHost) === getBaseDomain(d))) {
+          serviceHost = sHost;
+          relatedDomains = service.relatedDomains ?? [];
+          return { serviceHost, relatedDomains };
+        }
+      } catch { /* ignore */ }
+    }
+
+    // Check custom URL
+    if (account.customUrl) {
+      try {
+        const customHost = new URL(account.customUrl).hostname;
+        if (getBaseDomain(currentHost) === getBaseDomain(customHost)) {
+          serviceHost = customHost;
+          // For custom services, treat the base domain as related
+          relatedDomains = [getBaseDomain(customHost)];
+          return { serviceHost, relatedDomains };
+        }
+      } catch { /* ignore */ }
+    }
+  }
+
+  return { serviceHost, relatedDomains };
+}
+
 function handleExternalLink(url: string, serviceHost: string): void {
   const settings = store.get('settings');
   const external = isExternalUrl(url, serviceHost);
@@ -175,34 +219,11 @@ function createWindow(): void {
         return { action: 'deny' };
       }
 
-      // Determine service host and related domains from the webview's current URL
-      let serviceHost = '';
-      let relatedDomains: string[] = [];
-      try {
-        serviceHost = new URL(webviewWebContents.getURL()).hostname;
-      } catch { /* ignore */ }
-
-      const accounts = store.get('accounts', []);
-      for (const account of accounts) {
-        const service = PRESET_SERVICES.find((s) => s.id === account.serviceId);
-        if (service) {
-          try {
-            const sHost = new URL(service.url).hostname;
-            const currentHost = new URL(webviewWebContents.getURL()).hostname;
-            if (getBaseDomain(currentHost) === getBaseDomain(sHost) ||
-                (service.relatedDomains ?? []).some(d => getBaseDomain(currentHost) === getBaseDomain(d))) {
-              serviceHost = sHost;
-              relatedDomains = service.relatedDomains ?? [];
-              break;
-            }
-          } catch { /* ignore */ }
-        }
-      }
-
+      const { serviceHost, relatedDomains } = findServiceContext(webviewWebContents.getURL());
       const external = isExternalUrl(url, serviceHost, relatedDomains);
       const settings = store.get('settings');
 
-      console.log('[omatome] external:', external, 'linkOpenBehavior:', settings.linkOpenBehavior, 'serviceHost:', serviceHost, 'relatedDomains:', relatedDomains);
+      console.log('[omatome] external:', external, 'linkOpenBehavior:', settings.linkOpenBehavior, 'serviceHost:', serviceHost);
       if (external && settings.linkOpenBehavior === 'external-browser') {
         shell.openExternal(url);
       } else if (external && settings.linkOpenBehavior === 'in-app') {
@@ -231,25 +252,7 @@ function createWindow(): void {
         return;
       }
 
-      let serviceHost = '';
-      let relatedDomains: string[] = [];
-      const accounts = store.get('accounts', []);
-      for (const account of accounts) {
-        const service = PRESET_SERVICES.find((s) => s.id === account.serviceId);
-        if (service) {
-          try {
-            const sHost = new URL(service.url).hostname;
-            const currentHost = new URL(webviewWebContents.getURL()).hostname;
-            if (getBaseDomain(currentHost) === getBaseDomain(sHost) ||
-                (service.relatedDomains ?? []).some(d => getBaseDomain(currentHost) === getBaseDomain(d))) {
-              serviceHost = sHost;
-              relatedDomains = service.relatedDomains ?? [];
-              break;
-            }
-          } catch { /* ignore */ }
-        }
-      }
-
+      const { serviceHost, relatedDomains } = findServiceContext(webviewWebContents.getURL());
       const external = isExternalUrl(url, serviceHost, relatedDomains);
       const settings = store.get('settings');
 

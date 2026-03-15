@@ -1,7 +1,6 @@
 import { app, dialog, shell, BrowserWindow } from 'electron';
 import https from 'https';
 
-// GitHub repository owner/name — update this after creating the repo
 const GITHUB_OWNER = 'antech-yoshi';
 const GITHUB_REPO = 'omatome';
 
@@ -21,6 +20,7 @@ function fetchLatestRelease(): Promise<GitHubRelease | null> {
 
     https.get(options, (res) => {
       if (res.statusCode !== 200) {
+        console.log('[omatome] update check: HTTP', res.statusCode);
         resolve(null);
         res.resume();
         return;
@@ -34,7 +34,10 @@ function fetchLatestRelease(): Promise<GitHubRelease | null> {
           resolve(null);
         }
       });
-    }).on('error', () => resolve(null));
+    }).on('error', (err) => {
+      console.log('[omatome] update check error:', err.message);
+      resolve(null);
+    });
   });
 }
 
@@ -52,14 +55,18 @@ function compareVersions(current: string, latest: string): boolean {
 }
 
 export async function checkForUpdates(silent = true): Promise<void> {
+  console.log('[omatome] checking for updates... silent:', silent);
+
   const release = await fetchLatestRelease();
   if (!release) {
     if (!silent) {
-      dialog.showMessageBox({
-        type: 'info',
+      const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
+      await dialog.showMessageBox(Object.assign({}, win ? { parent: win } : {}), {
+        type: 'warning',
         title: 'Update Check',
         message: 'Could not check for updates.',
         detail: 'Please check your internet connection or try again later.',
+        buttons: ['OK'],
       });
     }
     return;
@@ -68,24 +75,29 @@ export async function checkForUpdates(silent = true): Promise<void> {
   const currentVersion = app.getVersion();
   const latestVersion = release.tag_name;
 
+  console.log('[omatome] current:', currentVersion, 'latest:', latestVersion);
+
   if (!compareVersions(currentVersion, latestVersion)) {
     if (!silent) {
-      dialog.showMessageBox({
+      const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
+      await dialog.showMessageBox(Object.assign({}, win ? { parent: win } : {}), {
         type: 'info',
         title: 'No Updates',
-        message: `You're on the latest version (v${currentVersion}).`,
+        message: 'You\'re up to date!',
+        detail: `Current version: v${currentVersion}`,
+        buttons: ['OK'],
       });
     }
     return;
   }
 
-  const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0] || null;
-
-  const { response } = await dialog.showMessageBox(win ? { ...win } as any : {}, {
+  // Update available
+  const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
+  const { response } = await dialog.showMessageBox(Object.assign({}, win ? { parent: win } : {}), {
     type: 'info',
     title: 'Update Available',
     message: `New version available: ${latestVersion}`,
-    detail: `Current version: v${currentVersion}\n\n${release.body ?? 'A new version is available.'}\n\nDownload and replace the app in /Applications.\nYour data and login sessions will be preserved.`,
+    detail: `Current version: v${currentVersion}\n\nDownload the new version and replace the app in /Applications.\nYour data and login sessions will be preserved.`,
     buttons: ['Download', 'Later'],
     defaultId: 0,
     cancelId: 1,

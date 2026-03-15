@@ -159,6 +159,17 @@ export const PRESET_SERVICES: ServiceDefinition[] = [
     isPreset: true,
     category: 'development',
   },
+
+  // Business
+  {
+    id: 'stripe',
+    name: 'Stripe',
+    url: 'https://dashboard.stripe.com/',
+    icon: 'stripe',
+    isPreset: true,
+    category: 'business',
+    relatedDomains: ['stripe.com'],
+  },
 ];
 
 export const SERVICE_CATEGORIES: Record<string, string> = {
@@ -166,6 +177,7 @@ export const SERVICE_CATEGORIES: Record<string, string> = {
   sns: 'SNS',
   productivity: 'Productivity',
   development: 'Development',
+  business: 'Business',
 };
 
 export const ACCOUNT_COLORS = [
