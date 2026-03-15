@@ -42,7 +42,6 @@ function fetchLatestRelease(): Promise<GitHubRelease | null> {
 }
 
 function compareVersions(current: string, latest: string): boolean {
-  // Returns true if latest > current
   const c = current.replace(/^v/, '').split('.').map(Number);
   const l = latest.replace(/^v/, '').split('.').map(Number);
   for (let i = 0; i < Math.max(c.length, l.length); i++) {
@@ -54,14 +53,25 @@ function compareVersions(current: string, latest: string): boolean {
   return false;
 }
 
+function getMainWindow(): BrowserWindow | undefined {
+  return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? undefined;
+}
+
+async function showDialog(options: Electron.MessageBoxOptions): Promise<number> {
+  const win = getMainWindow();
+  const result = win
+    ? await dialog.showMessageBox(win, options)
+    : await dialog.showMessageBox(options);
+  return result.response;
+}
+
 export async function checkForUpdates(silent = true): Promise<void> {
   console.log('[omatome] checking for updates... silent:', silent);
 
   const release = await fetchLatestRelease();
   if (!release) {
     if (!silent) {
-      const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
-      await dialog.showMessageBox(Object.assign({}, win ? { parent: win } : {}), {
+      await showDialog({
         type: 'warning',
         title: 'Update Check',
         message: 'Could not check for updates.',
@@ -79,8 +89,7 @@ export async function checkForUpdates(silent = true): Promise<void> {
 
   if (!compareVersions(currentVersion, latestVersion)) {
     if (!silent) {
-      const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
-      await dialog.showMessageBox(Object.assign({}, win ? { parent: win } : {}), {
+      await showDialog({
         type: 'info',
         title: 'No Updates',
         message: 'You\'re up to date!',
@@ -91,9 +100,7 @@ export async function checkForUpdates(silent = true): Promise<void> {
     return;
   }
 
-  // Update available
-  const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
-  const { response } = await dialog.showMessageBox(Object.assign({}, win ? { parent: win } : {}), {
+  const response = await showDialog({
     type: 'info',
     title: 'Update Available',
     message: `New version available: ${latestVersion}`,
