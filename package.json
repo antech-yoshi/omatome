@@ -1,6 +1,6 @@
 {
   "name": "omatome",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "omatome: Multi-service workspace manager with isolated sessions",
   "main": "out/main/index.js",
   "scripts": {
@@ -53,5 +53,10 @@
       "target": "nsis",
       "icon": "resources/icon.png"
     }
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2"
   }
 }
