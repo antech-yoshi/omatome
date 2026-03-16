@@ -2,6 +2,8 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import {
   DndContext,
   closestCenter,
+  pointerWithin,
+  rectIntersection,
   DragOverlay,
   DragStartEvent,
   DragEndEvent,
@@ -10,6 +12,7 @@ import {
   useSensor,
   useSensors,
   useDroppable,
+  CollisionDetection,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -204,16 +207,29 @@ export default function Sidebar({
         return;
       }
 
-      // Dragging over another account - move to that account's group if different
+      // Dragging over another account
       if (!overId.startsWith('group:') && activeId !== overId) {
         const draggedAccount = accounts.find((a) => a.id === activeId);
         const targetAccount = accounts.find((a) => a.id === overId);
-        if (draggedAccount && targetAccount && draggedAccount.groupId !== targetAccount.groupId) {
+        if (!draggedAccount || !targetAccount) return;
+
+        // Move to different group if needed
+        if (draggedAccount.groupId !== targetAccount.groupId) {
           onUpdateAccount({ ...draggedAccount, groupId: targetAccount.groupId });
+        }
+
+        // Reorder within the same group (live reorder during drag)
+        const allIds = accounts.map((a) => a.id);
+        const sourceIdx = allIds.indexOf(activeId);
+        const targetIdx = allIds.indexOf(overId);
+        if (sourceIdx !== -1 && targetIdx !== -1 && sourceIdx !== targetIdx) {
+          allIds.splice(sourceIdx, 1);
+          allIds.splice(targetIdx, 0, activeId);
+          onReorderAccounts(allIds);
         }
       }
     },
-    [dragType, accounts, onUpdateAccount]
+    [dragType, accounts, onUpdateAccount, onReorderAccounts]
   );
 
   const handleDragEnd = useCallback(
@@ -304,7 +320,7 @@ export default function Sidebar({
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={pointerWithin}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
@@ -363,6 +379,8 @@ export default function Sidebar({
               ))}
             </SortableContext>
           </SortableContext>
+          {/* Extra space at bottom for easier last-group drop target */}
+          <div className="h-8" />
         </div>
 
         {/* Drag overlay - floating ghost */}
