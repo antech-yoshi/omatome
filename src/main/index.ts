@@ -201,12 +201,10 @@ function createWindow(): void {
 
     // Auto-redirect when Slack shows the "launching workspace" page
     webviewWebContents.on('did-navigate', (_event: Electron.Event, url: string) => {
-      // Detect Slack's "launch workspace" / "ssb/redirect" pages and go to web client
-      const slackSsbMatch = url.match(/https:\/\/([^/]+\.slack\.com)\/(ssb|getting-started)/i);
+      const slackSsbMatch = url.match(/https:\/\/([^/]+\.slack\.com)\/(ssb|getting-started|workspace-signin)/i);
       if (slackSsbMatch) {
         const workspace = slackSsbMatch[1];
         webviewWebContents.loadURL(`https://${workspace}/`);
-        return;
       }
     });
 

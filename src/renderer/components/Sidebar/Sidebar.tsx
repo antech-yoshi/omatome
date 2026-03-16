@@ -245,12 +245,32 @@ export default function Sidebar({
         return;
       }
 
-      // Account reorder
+      // Account reorder / move
       if (!activeId.startsWith('group:')) {
-        // Skip if dropped on group zone (already handled in onDragOver)
-        if (overId.startsWith('group-zone:') || overId === 'ungrouped-zone') return;
+        const draggedAccount = accounts.find((a) => a.id === activeId);
+        if (!draggedAccount) return;
+
+        // Dropped on a group zone
+        if (overId.startsWith('group-zone:')) {
+          const targetGroupId = overId.replace('group-zone:', '');
+          if (draggedAccount.groupId !== targetGroupId) {
+            onUpdateAccount({ ...draggedAccount, groupId: targetGroupId });
+          }
+          return;
+        }
+
+        // Dropped on ungrouped zone
+        if (overId === 'ungrouped-zone') {
+          if (draggedAccount.groupId) {
+            onUpdateAccount({ ...draggedAccount, groupId: undefined });
+          }
+          return;
+        }
+
+        // Dropped on a group header (not zone)
         if (overId.startsWith('group:')) return;
 
+        // Dropped on another account
         if (activeId !== overId) {
           const allIds = accounts.map((a) => a.id);
           const sourceIdx = allIds.indexOf(activeId);

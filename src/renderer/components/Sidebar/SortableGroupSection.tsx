@@ -43,17 +43,14 @@ export default function SortableGroupSection({
     opacity: isDragging ? 0.3 : undefined,
   };
 
+  const showDropHighlight = isOver && isAccountDragging;
+
   return (
     <div
-      ref={(node) => {
-        setSortableRef(node);
-        setDroppableRef(node);
-      }}
+      ref={setSortableRef}
       style={style}
       {...attributes}
-      className={`mt-1 first:mt-0 rounded-md transition-all ${
-        isOver && isAccountDragging ? 'bg-indigo-50 dark:bg-indigo-900/20 ring-1 ring-indigo-300' : ''
-      }`}
+      className="mt-1 first:mt-0"
     >
       {!collapsed ? (
         <div
@@ -90,7 +87,17 @@ export default function SortableGroupSection({
           />
         </div>
       )}
-      <div className={`space-y-0.5 ${!hasAccounts ? 'min-h-[24px]' : ''}`}>
+      {/* Droppable zone for accounts - separate ref */}
+      <div
+        ref={setDroppableRef}
+        className={`space-y-0.5 rounded-md transition-all ${
+          showDropHighlight
+            ? 'bg-indigo-50 dark:bg-indigo-900/20 ring-1 ring-indigo-300 min-h-[40px]'
+            : !hasAccounts
+              ? 'min-h-[24px]'
+              : ''
+        }`}
+      >
         {children}
       </div>
     </div>
