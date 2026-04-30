@@ -134,6 +134,11 @@ function routeLink(url: string, sourceUrl: string): LinkRoute {
   if (/^(slack|discord|msteams|tg|whatsapp):\/\//i.test(url)) return 'blocked';
   if (/slack\.com\/(ssb\/redirect|signout_confirm)/i.test(url)) return 'blocked';
 
+  // If we have no usable source (uncommitted webview, about:blank, etc.),
+  // do NOT intercept — let the navigation through. Otherwise the service's
+  // own initial load chain would be wrongly classified as external.
+  if (!sourceUrl || !/^https?:\/\//i.test(sourceUrl)) return 'same-service';
+
   const { serviceHost, relatedDomains } = findServiceContext(sourceUrl);
   const external = isExternalUrl(url, serviceHost, relatedDomains);
   if (!external) return 'same-service';
@@ -191,9 +196,19 @@ function createWindow(): void {
     return { action: 'deny' };
   });
 
+  // Track which webviews have completed at least one top-level navigation.
+  // Until then, we MUST NOT intercept will-navigate/will-redirect, otherwise
+  // the service's own initial load (and its auth redirects) gets routed
+  // as "external" because webContents.getURL() is still empty/uncommitted.
+  const committed = new WeakSet<Electron.WebContents>();
+
   // Intercept webview webContents creation for link handling
   mainWindow.webContents.on('did-attach-webview', (_event, webviewWebContents) => {
     console.log('[omatome] did-attach-webview fired for webContents id:', webviewWebContents.id);
+
+    webviewWebContents.on('did-navigate', () => {
+      committed.add(webviewWebContents);
+    });
 
     // Monitor Meta key in webview for shortcut badge display
     webviewWebContents.on('before-input-event', (_event, input) => {
@@ -247,6 +262,12 @@ function createWindow(): void {
 
     // Handle navigation within the webview (direct link clicks, JS-driven nav)
     webviewWebContents.on('will-navigate', (event: Electron.Event, url: string) => {
+      // Initial load: don't intercept — let the service's own redirect chain run.
+      if (!committed.has(webviewWebContents)) {
+        console.log('[omatome] will-navigate (pre-commit, ignored):', url);
+        return;
+      }
+
       const route = routeLink(url, webviewWebContents.getURL());
       console.log('[omatome] will-navigate:', url, '→', route);
 
@@ -264,6 +285,13 @@ function createWindow(): void {
 
     // Handle HTTP redirects (e.g. Gmail's google.com/url?q=…, Slack's slack-redir.net)
     webviewWebContents.on('will-redirect', (event: Electron.Event, url: string) => {
+      // Initial load: webContents.getURL() is still empty/uncommitted, so
+      // intercepting here would mis-route the service's own URL as external.
+      if (!committed.has(webviewWebContents)) {
+        console.log('[omatome] will-redirect (pre-commit, ignored):', url);
+        return;
+      }
+
       const route = routeLink(url, webviewWebContents.getURL());
       console.log('[omatome] will-redirect:', url, '→', route);
 
