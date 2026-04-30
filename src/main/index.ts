@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, session, shell, webContents } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { createStore } from './store';
 import { registerIpcHandlers } from './ipc-handlers';
 import { registerShortcuts } from './shortcuts';
@@ -222,7 +223,14 @@ function createWindow(): void {
       const downloadPath = store.get('settings').downloadPath;
       if (downloadPath) {
         const filePath = path.join(downloadPath, item.getFilename());
-        item.setSavePath(filePath);
+        if (fs.existsSync(filePath)) {
+          // Filename collision — let the OS show its native save dialog so
+          // the user can rename or confirm overwrite, instead of silently
+          // replacing the existing file.
+          item.setSaveDialogOptions({ defaultPath: filePath });
+        } else {
+          item.setSavePath(filePath);
+        }
       }
 
       const id = `dl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

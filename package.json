@@ -1,6 +1,6 @@
 {
   "name": "omatome",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "omatome: Multi-service workspace manager with isolated sessions",
   "main": "out/main/index.js",
   "scripts": {
