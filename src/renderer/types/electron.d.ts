@@ -16,6 +16,7 @@ declare global {
       reorderGroups: (orderedIds: string[]) => Promise<Group[]>;
       openExternal: (url: string) => Promise<void>;
       getWebviewPreloadPath: () => Promise<string>;
+      showItemInFolder: (filePath: string) => Promise<void>;
       selectFolder: () => Promise<string | null>;
       getSettings: () => Promise<AppSettings>;
       updateSettings: (settings: Partial<AppSettings>) => Promise<AppSettings>;

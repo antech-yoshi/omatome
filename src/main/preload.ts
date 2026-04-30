@@ -23,6 +23,9 @@ const api = {
   // Webview preload path (file:// URL) for <webview preload="...">
   getWebviewPreloadPath: (): Promise<string> => ipcRenderer.invoke('webview:get-preload-path'),
 
+  // Reveal a file in Finder / Explorer
+  showItemInFolder: (filePath: string): Promise<void> => ipcRenderer.invoke('shell:show-in-folder', filePath),
+
   // Dialog
   selectFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:select-folder'),
 
@@ -51,6 +54,9 @@ const api = {
       'open-in-app-tab',
       'meta-key:down',
       'meta-key:up',
+      'download:started',
+      'download:updated',
+      'download:done',
     ];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => callback(...args));

@@ -5,6 +5,7 @@ import ServiceAddModal from './components/ServiceAddModal/ServiceAddModal';
 import AccountEditModal from './components/AccountEditModal/AccountEditModal';
 import GroupEditModal from './components/GroupEditModal/GroupEditModal';
 import Settings from './components/Settings/Settings';
+import DownloadFooter from './components/DownloadFooter/DownloadFooter';
 import { useAccounts } from './hooks/useAccounts';
 import { useShortcuts } from './hooks/useShortcuts';
 import { useTheme } from './hooks/useTheme';
@@ -172,32 +173,36 @@ export default function App() {
   }
 
   return (
-    <div className="h-full flex bg-white dark:bg-gray-900">
-      <Sidebar
-        accounts={accounts}
-        groups={groups}
-        ephemeralTabs={ephemeralTabs}
-        activeAccountId={activeAccountId}
-        activeEphemeralTabId={activeEphemeralTabId}
-        collapsed={sidebarCollapsed}
-        onSelectAccount={handleSelectAccount}
-        onSelectEphemeralTab={handleSelectEphemeralTab}
-        onCloseEphemeralTab={handleCloseEphemeralTab}
-        onAddAccount={() => setShowAddModal(true)}
-        onAddGroup={addGroup}
-        onUpdateAccount={updateAccount}
-        onEditAccount={setEditingAccount}
-        onEditGroup={setEditingGroup}
-        onReorderAccounts={reorderAccounts}
-        onReorderGroups={reorderGroups}
-      />
+    <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+      <div className="flex-1 flex min-h-0">
+        <Sidebar
+          accounts={accounts}
+          groups={groups}
+          ephemeralTabs={ephemeralTabs}
+          activeAccountId={activeAccountId}
+          activeEphemeralTabId={activeEphemeralTabId}
+          collapsed={sidebarCollapsed}
+          onSelectAccount={handleSelectAccount}
+          onSelectEphemeralTab={handleSelectEphemeralTab}
+          onCloseEphemeralTab={handleCloseEphemeralTab}
+          onAddAccount={() => setShowAddModal(true)}
+          onAddGroup={addGroup}
+          onUpdateAccount={updateAccount}
+          onEditAccount={setEditingAccount}
+          onEditGroup={setEditingGroup}
+          onReorderAccounts={reorderAccounts}
+          onReorderGroups={reorderGroups}
+        />
 
-      <WebViewContainer
-        accounts={accounts}
-        ephemeralTabs={ephemeralTabs}
-        activeAccountId={activeAccountId}
-        activeEphemeralTabId={activeEphemeralTabId}
-      />
+        <WebViewContainer
+          accounts={accounts}
+          ephemeralTabs={ephemeralTabs}
+          activeAccountId={activeAccountId}
+          activeEphemeralTabId={activeEphemeralTabId}
+        />
+      </div>
+
+      <DownloadFooter />
 
       <ServiceAddModal
         isOpen={showAddModal}

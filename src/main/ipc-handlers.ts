@@ -19,6 +19,11 @@ export function registerIpcHandlers(store: AppStore): void {
     return pathToFileURL(path.join(__dirname, '../preload/webview-preload.js')).toString();
   });
 
+  // Reveal a downloaded file in Finder/Explorer
+  ipcMain.handle('shell:show-in-folder', (_event, filePath: string) => {
+    if (filePath) shell.showItemInFolder(filePath);
+  });
+
   ipcMain.handle('account:list', () => {
     return store.get('accounts', []);
   });

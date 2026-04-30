@@ -217,13 +217,41 @@ function createWindow(): void {
       }
     });
 
-    // Handle downloads: apply configured download path
+    // Handle downloads: apply configured download path AND notify renderer
     webviewWebContents.session.on('will-download', (_event, item) => {
       const downloadPath = store.get('settings').downloadPath;
       if (downloadPath) {
         const filePath = path.join(downloadPath, item.getFilename());
         item.setSavePath(filePath);
       }
+
+      const id = `dl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const filename = item.getFilename();
+
+      mainWindow?.webContents.send('download:started', {
+        id,
+        filename,
+        totalBytes: item.getTotalBytes(),
+        savePath: item.getSavePath() || '',
+      });
+
+      item.on('updated', (_e, state) => {
+        mainWindow?.webContents.send('download:updated', {
+          id,
+          state, // 'progressing' | 'interrupted'
+          paused: item.isPaused(),
+          receivedBytes: item.getReceivedBytes(),
+          totalBytes: item.getTotalBytes(),
+        });
+      });
+
+      item.once('done', (_e, state) => {
+        mainWindow?.webContents.send('download:done', {
+          id,
+          state, // 'completed' | 'cancelled' | 'interrupted'
+          savePath: item.getSavePath(),
+        });
+      });
     });
 
     // Set Chrome-compatible User-Agent to bypass service browser checks (Slack, etc.)
