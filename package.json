@@ -1,6 +1,6 @@
 {
   "name": "omatome",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "omatome: Multi-service workspace manager with isolated sessions",
   "main": "out/main/index.js",
   "scripts": {
@@ -8,9 +8,9 @@
     "dev:clean": "rm -rf ~/Library/Application\\ Support/omatome && electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "package:mac": "npm run build && electron-builder --mac",
-    "package:win": "npm run build && electron-builder --win",
-    "package": "npm run build && electron-builder --mac --win"
+    "package:mac": "npm run build && electron-builder --mac --publish never",
+    "package:win": "npm run build && electron-builder --win --publish never",
+    "package": "npm run build && electron-builder --mac --win --publish never"
   },
   "keywords": [],
   "author": "",
