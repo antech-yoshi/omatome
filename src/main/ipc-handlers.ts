@@ -1,11 +1,22 @@
 import { ipcMain, nativeTheme, session, shell, dialog } from 'electron';
+import path from 'path';
+import { pathToFileURL } from 'url';
 import type { AppStore } from './store';
 import type { Account, Group, AppState, AppSettings } from '@shared/types';
 
 export function registerIpcHandlers(store: AppStore): void {
   // Open URL in default browser
-  ipcMain.handle('shell:open-external', (_event, url: string) => {
-    return shell.openExternal(url);
+  ipcMain.handle('shell:open-external', async (_event, url: string) => {
+    try {
+      await shell.openExternal(url);
+    } catch (err) {
+      console.error('[omatome] shell.openExternal failed:', url, err);
+    }
+  });
+
+  // file:// URL of the webview preload script (consumed by <webview preload="...">)
+  ipcMain.handle('webview:get-preload-path', () => {
+    return pathToFileURL(path.join(__dirname, '../preload/webview-preload.js')).toString();
   });
 
   ipcMain.handle('account:list', () => {

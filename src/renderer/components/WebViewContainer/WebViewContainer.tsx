@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { Account, EphemeralTab } from '@shared/types';
 import { PRESET_SERVICES } from '@shared/constants';
 
@@ -17,6 +17,11 @@ export default function WebViewContainer({
 }: WebViewContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const webviewRefs = useRef<Map<string, Electron.WebviewTag>>(new Map());
+  const [preloadPath, setPreloadPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    window.electronAPI.getWebviewPreloadPath().then(setPreloadPath);
+  }, []);
 
   // Known service URLs for accounts whose service may have been removed from presets
   const LEGACY_SERVICE_URLS: Record<string, string> = {
@@ -33,11 +38,12 @@ export default function WebViewContainer({
   // Manage account webviews
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container || !preloadPath) return;
 
     for (const account of accounts) {
       if (!webviewRefs.current.has(account.id)) {
         const webview = document.createElement('webview') as Electron.WebviewTag;
+        webview.setAttribute('preload', preloadPath);
         webview.src = getServiceUrl(account);
         webview.partition = `persist:${account.partitionKey}`;
         webview.setAttribute('allowpopups', '');
@@ -60,16 +66,17 @@ export default function WebViewContainer({
         webviewRefs.current.delete(id);
       }
     }
-  }, [accounts]);
+  }, [accounts, preloadPath]);
 
   // Manage ephemeral tab webviews
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container || !preloadPath) return;
 
     for (const tab of ephemeralTabs) {
       if (!webviewRefs.current.has(tab.id)) {
         const webview = document.createElement('webview') as Electron.WebviewTag;
+        webview.setAttribute('preload', preloadPath);
         webview.src = tab.url;
         webview.partition = `persist:${tab.partitionKey}`;
         webview.setAttribute('allowpopups', '');
@@ -92,7 +99,7 @@ export default function WebViewContainer({
         webviewRefs.current.delete(id);
       }
     }
-  }, [ephemeralTabs]);
+  }, [ephemeralTabs, preloadPath]);
 
   // Show/hide webviews
   useEffect(() => {

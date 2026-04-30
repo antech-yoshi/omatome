@@ -20,6 +20,9 @@ const api = {
   // Shell
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
 
+  // Webview preload path (file:// URL) for <webview preload="...">
+  getWebviewPreloadPath: (): Promise<string> => ipcRenderer.invoke('webview:get-preload-path'),
+
   // Dialog
   selectFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:select-folder'),
 

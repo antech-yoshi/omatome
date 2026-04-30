@@ -104,21 +104,42 @@ function findServiceContext(currentUrl: string): { serviceHost: string; relatedD
   return { serviceHost, relatedDomains };
 }
 
-function handleExternalLink(url: string, serviceHost: string): void {
+// Dedup recently-handled URLs so the same click captured by both
+// preload IPC and a main-side event doesn't open the browser twice.
+const recentlyHandled = new Map<string, number>();
+function shouldHandle(url: string): boolean {
+  const now = Date.now();
+  const last = recentlyHandled.get(url);
+  if (last && now - last < 800) return false;
+  recentlyHandled.set(url, now);
+  if (recentlyHandled.size > 200) {
+    for (const [k, t] of recentlyHandled.entries()) {
+      if (now - t > 5000) recentlyHandled.delete(k);
+    }
+  }
+  return true;
+}
+
+async function openExternalSafe(url: string): Promise<void> {
+  try {
+    await shell.openExternal(url);
+  } catch (err) {
+    console.error('[omatome] shell.openExternal failed:', url, err);
+  }
+}
+
+type LinkRoute = 'external' | 'in-app' | 'same-service' | 'blocked';
+
+function routeLink(url: string, sourceUrl: string): LinkRoute {
+  if (/^(slack|discord|msteams|tg|whatsapp):\/\//i.test(url)) return 'blocked';
+  if (/slack\.com\/(ssb\/redirect|signout_confirm)/i.test(url)) return 'blocked';
+
+  const { serviceHost, relatedDomains } = findServiceContext(sourceUrl);
+  const external = isExternalUrl(url, serviceHost, relatedDomains);
+  if (!external) return 'same-service';
+
   const settings = store.get('settings');
-  const external = isExternalUrl(url, serviceHost);
-
-  if (!external) {
-    // Same-service link — let webview handle it, do nothing here
-    return;
-  }
-
-  if (settings.linkOpenBehavior === 'external-browser') {
-    shell.openExternal(url);
-  } else {
-    // in-app: send to renderer to create ephemeral tab
-    mainWindow?.webContents.send('open-in-app-tab', url);
-  }
+  return settings.linkOpenBehavior === 'external-browser' ? 'external' : 'in-app';
 }
 
 function createWindow(): void {
@@ -166,7 +187,7 @@ function createWindow(): void {
 
   // Handle links opened from the main renderer window itself
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    openExternalSafe(url);
     return { action: 'deny' };
   });
 
@@ -210,62 +231,74 @@ function createWindow(): void {
 
     // Handle target="_blank" / window.open() inside webviews
     webviewWebContents.setWindowOpenHandler(({ url }) => {
-      console.log('[omatome] setWindowOpenHandler fired:', url);
+      const route = routeLink(url, webviewWebContents.getURL());
+      console.log('[omatome] setWindowOpenHandler:', url, '→', route);
 
-      // Block custom protocol schemes
-      if (/^(slack|discord|msteams|tg|whatsapp):\/\//i.test(url)) {
+      if (route === 'blocked') return { action: 'deny' };
+      if (route === 'same-service') {
+        webviewWebContents.loadURL(url);
         return { action: 'deny' };
       }
-
-      const { serviceHost, relatedDomains } = findServiceContext(webviewWebContents.getURL());
-      const external = isExternalUrl(url, serviceHost, relatedDomains);
-      const settings = store.get('settings');
-
-      console.log('[omatome] external:', external, 'linkOpenBehavior:', settings.linkOpenBehavior, 'serviceHost:', serviceHost);
-      if (external && settings.linkOpenBehavior === 'external-browser') {
-        shell.openExternal(url);
-      } else if (external && settings.linkOpenBehavior === 'in-app') {
-        mainWindow?.webContents.send('open-in-app-tab', url);
-      } else {
-        // Same-service or related-domain navigation: load in the webview itself
-        webviewWebContents.loadURL(url);
-      }
-
+      if (!shouldHandle(url)) return { action: 'deny' };
+      if (route === 'external') openExternalSafe(url);
+      else mainWindow?.webContents.send('open-in-app-tab', url);
       return { action: 'deny' };
     });
 
-    // Handle navigation within the webview (link clicks, redirects)
+    // Handle navigation within the webview (direct link clicks, JS-driven nav)
     webviewWebContents.on('will-navigate', (event: Electron.Event, url: string) => {
-      console.log('[omatome] will-navigate fired:', url);
+      const route = routeLink(url, webviewWebContents.getURL());
+      console.log('[omatome] will-navigate:', url, '→', route);
 
-      // Block custom protocol schemes (slack://, discord://, etc.)
-      if (/^(slack|discord|msteams|tg|whatsapp):\/\//i.test(url)) {
+      if (route === 'blocked') {
         event.preventDefault();
         return;
       }
+      if (route === 'same-service') return; // let webview navigate normally
 
-      // Block Slack's SSB redirect pages (they try to open the desktop app)
-      if (/slack\.com\/(ssb\/redirect|signout_confirm)/i.test(url)) {
-        event.preventDefault();
-        return;
-      }
-
-      const { serviceHost, relatedDomains } = findServiceContext(webviewWebContents.getURL());
-      const external = isExternalUrl(url, serviceHost, relatedDomains);
-      const settings = store.get('settings');
-
-      console.log('[omatome] will-navigate external:', external, 'linkOpenBehavior:', settings.linkOpenBehavior);
-      if (external && settings.linkOpenBehavior === 'external-browser') {
-        event.preventDefault();
-        console.log('[omatome] will-navigate: opening external browser:', url);
-        shell.openExternal(url);
-      } else if (external && settings.linkOpenBehavior === 'in-app') {
-        event.preventDefault();
-        console.log('[omatome] will-navigate: opening in app tab:', url);
-        mainWindow?.webContents.send('open-in-app-tab', url);
-      }
-      // Same-service or related-domain: let navigation proceed normally
+      event.preventDefault();
+      if (!shouldHandle(url)) return;
+      if (route === 'external') openExternalSafe(url);
+      else mainWindow?.webContents.send('open-in-app-tab', url);
     });
+
+    // Handle HTTP redirects (e.g. Gmail's google.com/url?q=…, Slack's slack-redir.net)
+    webviewWebContents.on('will-redirect', (event: Electron.Event, url: string) => {
+      const route = routeLink(url, webviewWebContents.getURL());
+      console.log('[omatome] will-redirect:', url, '→', route);
+
+      if (route === 'blocked') {
+        event.preventDefault();
+        return;
+      }
+      if (route === 'same-service') return;
+
+      event.preventDefault();
+      if (!shouldHandle(url)) return;
+      if (route === 'external') openExternalSafe(url);
+      else mainWindow?.webContents.send('open-in-app-tab', url);
+    });
+  });
+
+  // Receive clicks captured by the webview preload (capture-phase anchor click).
+  // The preload already preventDefault'd the click, so we just route it.
+  ipcMain.on('webview:link-click', (event, payload: { href: string; sourceUrl: string }) => {
+    const { href, sourceUrl } = payload || ({} as { href: string; sourceUrl: string });
+    if (!href) return;
+    const route = routeLink(href, sourceUrl || event.sender.getURL());
+    console.log('[omatome] webview:link-click:', href, '→', route);
+
+    if (route === 'blocked') return;
+    if (!shouldHandle(href)) return;
+
+    if (route === 'external') {
+      openExternalSafe(href);
+    } else if (route === 'in-app') {
+      mainWindow?.webContents.send('open-in-app-tab', href);
+    } else {
+      // same-service: load inside the webview that emitted the click
+      event.sender.loadURL(href);
+    }
   });
 
   if (process.env.ELECTRON_RENDERER_URL) {

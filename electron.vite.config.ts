@@ -19,8 +19,14 @@ export default defineConfig({
   },
   preload: {
     build: {
-      lib: {
-        entry: resolve(__dirname, 'src/main/preload.ts'),
+      rollupOptions: {
+        input: {
+          preload: resolve(__dirname, 'src/main/preload.ts'),
+          'webview-preload': resolve(__dirname, 'src/main/webview-preload.ts'),
+        },
+        output: {
+          entryFileNames: '[name].js',
+        },
       },
     },
     resolve: {
