@@ -203,6 +203,12 @@ function createWindow(): void {
   // as "external" because webContents.getURL() is still empty/uncommitted.
   const committed = new WeakSet<Electron.WebContents>();
 
+  // Sessions on which we've already attached the will-download handler.
+  // Multiple webviews can share a session (same partition), and did-attach-webview
+  // fires per attach (incl. after renderer reload), so without this guard the
+  // handler stacks and one download produces multiple footer entries.
+  const sessionsWithDownloadHandler = new WeakSet<Electron.Session>();
+
   // Intercept webview webContents creation for link handling
   mainWindow.webContents.on('did-attach-webview', (_event, webviewWebContents) => {
     console.log('[omatome] did-attach-webview fired for webContents id:', webviewWebContents.id);
@@ -218,49 +224,54 @@ function createWindow(): void {
       }
     });
 
-    // Handle downloads: apply configured download path AND notify renderer
-    webviewWebContents.session.on('will-download', (_event, item) => {
-      const downloadPath = store.get('settings').downloadPath;
-      if (downloadPath) {
-        const filePath = path.join(downloadPath, item.getFilename());
-        if (fs.existsSync(filePath)) {
-          // Filename collision — let the OS show its native save dialog so
-          // the user can rename or confirm overwrite, instead of silently
-          // replacing the existing file.
-          item.setSaveDialogOptions({ defaultPath: filePath });
-        } else {
-          item.setSavePath(filePath);
+    // Handle downloads: apply configured download path AND notify renderer.
+    // Register once per Session — sessions are shared across webviews using
+    // the same partition (and persist across renderer reloads).
+    if (!sessionsWithDownloadHandler.has(webviewWebContents.session)) {
+      sessionsWithDownloadHandler.add(webviewWebContents.session);
+      webviewWebContents.session.on('will-download', (_event, item) => {
+        const downloadPath = store.get('settings').downloadPath;
+        if (downloadPath) {
+          const filePath = path.join(downloadPath, item.getFilename());
+          if (fs.existsSync(filePath)) {
+            // Filename collision — let the OS show its native save dialog so
+            // the user can rename or confirm overwrite, instead of silently
+            // replacing the existing file.
+            item.setSaveDialogOptions({ defaultPath: filePath });
+          } else {
+            item.setSavePath(filePath);
+          }
         }
-      }
 
-      const id = `dl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const filename = item.getFilename();
+        const id = `dl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const filename = item.getFilename();
 
-      mainWindow?.webContents.send('download:started', {
-        id,
-        filename,
-        totalBytes: item.getTotalBytes(),
-        savePath: item.getSavePath() || '',
-      });
-
-      item.on('updated', (_e, state) => {
-        mainWindow?.webContents.send('download:updated', {
+        mainWindow?.webContents.send('download:started', {
           id,
-          state, // 'progressing' | 'interrupted'
-          paused: item.isPaused(),
-          receivedBytes: item.getReceivedBytes(),
+          filename,
           totalBytes: item.getTotalBytes(),
+          savePath: item.getSavePath() || '',
         });
-      });
 
-      item.once('done', (_e, state) => {
-        mainWindow?.webContents.send('download:done', {
-          id,
-          state, // 'completed' | 'cancelled' | 'interrupted'
-          savePath: item.getSavePath(),
+        item.on('updated', (_e, state) => {
+          mainWindow?.webContents.send('download:updated', {
+            id,
+            state, // 'progressing' | 'interrupted'
+            paused: item.isPaused(),
+            receivedBytes: item.getReceivedBytes(),
+            totalBytes: item.getTotalBytes(),
+          });
+        });
+
+        item.once('done', (_e, state) => {
+          mainWindow?.webContents.send('download:done', {
+            id,
+            state, // 'completed' | 'cancelled' | 'interrupted'
+            savePath: item.getSavePath(),
+          });
         });
       });
-    });
+    }
 
     // Set Chrome-compatible User-Agent to bypass service browser checks (Slack, etc.)
     webviewWebContents.setUserAgent(CHROME_USER_AGENT);
